@@ -9,6 +9,6 @@ import com.vint.pdf2ppt.core.PdfToPPT;
 public class Main {
 
 	public static void main(String args[]) throws FileNotFoundException, IOException {
-		new PdfToPPT().process(new File("C:/Users/Brad/Downloads/Physiology Lectures Pt. II.pdf"), new File(""));
+		new PdfToPPT().process(new File("Physiology Lectures Pt. II.pdf"), new File(""));
 	}
 }
