@@ -1,3 +1,20 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+eclipse {
+    classpath {
+       downloadSources=true
+    }
+}
 task wrapper(type: Wrapper) {
     gradleVersion = '1.10'
+}
+
+repositories {
+    mavenCentral()
+    mavenRepo name: "Grails", url: "http://repo.grails.org/grails/repo/"
+}
+
+dependencies {
+	compile "org.apache.poi:poi:3.0-FINAL"
 }
