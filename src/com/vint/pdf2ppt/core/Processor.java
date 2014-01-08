@@ -1,4 +1,4 @@
-package com.vint.mso2ppt.core;
+package com.vint.pdf2ppt.core;
 
 import java.io.File;
 import java.io.FileNotFoundException;

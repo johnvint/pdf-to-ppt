@@ -1,4 +1,4 @@
-package com.vint.mso2ppt.ui;
+package com.vint.pdf2ppt.ui;
 
 public class UserInterface {
 

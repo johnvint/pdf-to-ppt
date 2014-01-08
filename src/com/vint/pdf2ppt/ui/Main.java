@@ -1,10 +1,10 @@
-package com.vint.mso2ppt.ui;
+package com.vint.pdf2ppt.ui;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import com.vint.mso2ppt.core.PdfToPPT;
+import com.vint.pdf2ppt.core.PdfToPPT;
 
 public class Main {
 
