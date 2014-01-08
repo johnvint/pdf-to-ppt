@@ -9,15 +9,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import javax.imageio.ImageIO;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDResources;
-import org.apache.pdfbox.pdmodel.graphics.xobject.PDCcitt;
-import org.apache.pdfbox.util.PDFImageWriter;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
@@ -30,20 +26,22 @@ public class PdfToPPT implements Processor {
 		PDDocument doc = PDDocument.load(input);
 		List<PDPage> pages = doc.getDocumentCatalog().getAllPages();
 		Iterator iter = pages.iterator();
-		PDPage page = (PDPage) iter.next();
 		XMLSlideShow ppt = new XMLSlideShow();
-		XSLFSlide slide = ppt.createSlide();
 		java.awt.Dimension pgsize = ppt.getPageSize();
 
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		ImageIO.write(page.convertToImage(BufferedImage.TYPE_INT_RGB, 400), "jpg", baos);
-		baos.flush();
-		byte[] imageInByte = baos.toByteArray();
-		System.out.println(imageInByte.length);
+		while (iter.hasNext()) {
+			XSLFSlide slide = ppt.createSlide();
+			PDPage page = (PDPage) iter.next();
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ImageIO.write(page.convertToImage(BufferedImage.TYPE_INT_RGB, 400), "jpg", baos);
+			baos.flush();
+			byte[] imageInByte = baos.toByteArray();
+			System.out.println(imageInByte.length);
 
-		int idx = ppt.addPicture(imageInByte, XSLFPictureData.PICTURE_TYPE_JPEG);
-		XSLFPictureShape pic = slide.createPicture(idx);
-		pic.setAnchor(new Rectangle2D.Double(0, 0, pgsize.width + 50, pgsize.height));
+			int idx = ppt.addPicture(imageInByte, XSLFPictureData.PICTURE_TYPE_JPEG);
+			XSLFPictureShape pic = slide.createPicture(idx);
+			pic.setAnchor(new Rectangle2D.Double(0, 0, pgsize.width + 50, pgsize.height));
+		}
 		FileOutputStream out = new FileOutputStream("C:/Users/Brad/merged.ppt");
 		ppt.write(out);
 		out.close();
