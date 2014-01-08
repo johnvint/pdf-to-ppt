@@ -5,14 +5,14 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.apache.poi.hwpf.HWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.w3c.dom.ranges.Range;
 
 public class MicrosoftWordToPPT implements Processor {
 
 	@Override
 	public void process(File input, File output) throws FileNotFoundException, IOException {
-		HWPFDocument l = new HWPFDocument(new FileInputStream(input));
-		int pagesNo = l.getSummaryInformation().getPageCount();
+		XWPFDocument doc = new XWPFDocument(new FileInputStream(input));
 	}
 
 }

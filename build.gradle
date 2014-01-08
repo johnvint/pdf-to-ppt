@@ -16,5 +16,6 @@ repositories {
 }
 
 dependencies {
-	compile "org.apache.poi:poi:3.0-FINAL"
+	compile "org.apache.poi:poi:3.10-beta2"
+	compile "org.apache.poi:poi-ooxml:3.10-beta2"
 }
