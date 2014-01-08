@@ -42,7 +42,7 @@ public class PdfToPPT implements Processor {
 			XSLFPictureShape pic = slide.createPicture(idx);
 			pic.setAnchor(new Rectangle2D.Double(0, 0, pgsize.width + 50, pgsize.height));
 		}
-		FileOutputStream out = new FileOutputStream("C:/Users/Brad/merged.ppt");
+		FileOutputStream out = new FileOutputStream("merged.ppt");
 		ppt.write(out);
 		out.close();
 	}
