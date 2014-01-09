@@ -1,6 +1,9 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
+apply plugin:'application'
 
+mainClassName = "com.vint.pdf2ppt.ui.Main"
+	
 eclipse {
     classpath {
        downloadSources=true
