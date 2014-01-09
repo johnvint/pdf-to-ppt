@@ -1,5 +1,6 @@
 package com.vint.pdf2ppt.core;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.Rectangle2D;
@@ -23,106 +24,124 @@ import org.apache.poi.xslf.usermodel.XSLFSlide;
 
 public class PdfToPpt implements ProcessorFactory {
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public ConversionProcessor prepare(File input, File output) throws IOException {
-		return new DefaultConversionProcessor(input, output);
-	}
+    @Override
+    public ConversionProcessor prepare(File input, File output) throws IOException {
+        return new DefaultConversionProcessorDelegate(input, output);
+    }
 
-	private static final class DefaultConversionProcessor implements ConversionProcessor {
-		private final File output;
-		private PDDocument doc;
-		private final ExecutorService executor = Executors.newSingleThreadExecutor();
-		private volatile ConversionCallback callback;
+    private static final class DefaultConversionProcessorDelegate implements ConversionProcessor {
+        private volatile File output;
+        private final PDDocument doc;
+        private final ExecutorService executor = Executors.newSingleThreadExecutor();
+        private volatile ConversionCallback callback;
 
-		private DefaultConversionProcessor(File input, File output) throws IOException {
-			doc = PDDocument.load(input);
-			this.output = output;
-		}
+        private DefaultConversionProcessorDelegate(File input, File output) throws IOException {
+            doc = PDDocument.load(input);
+            this.output = output;
+        }
 
-		@Override
-		public void execute() {
-			executor.execute(new Runnable() {
-				public void run() {
-					try {
-						asyncExecute();
-					} catch (Exception ex) {
-						ex.printStackTrace();
-					}
-				}
-			});
-		}
+        @Override
+        public void execute() {
+            executor.execute(new Runnable() {
+                public void run() {
+                    try {
+                        doExecute();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            });
+        }
 
-		private void asyncExecute() throws IOException {
-			if (callback != null) {
-				callback.onStart();
-			}
+        @SuppressWarnings("unchecked")
+        private void doExecute() throws IOException {
+            if (callback != null) {
+                callback.onStart();
+            }
 
-			List<PDPage> pages = doc.getDocumentCatalog().getAllPages();
-			XMLSlideShow ppt = new XMLSlideShow();
-			java.awt.Dimension pgsize = ppt.getPageSize();
+            List<PDPage> pages = doc.getDocumentCatalog().getAllPages();
+            XMLSlideShow ppt = new XMLSlideShow();
+            java.awt.Dimension pgsize = ppt.getPageSize();
 
-			int count = 0;
-			for (PDPage page : pages) {
+            int count = 0;
+            for (PDPage page : pages) {
+                XSLFSlide slide = ppt.createSlide();
 
-				XSLFSlide slide = ppt.createSlide();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                BufferedImage bi = page.convertToImage(BufferedImage.TYPE_INT_ARGB, 600);
 
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				BufferedImage bi = page.convertToImage(BufferedImage.TYPE_INT_RGB, 400);
-				BufferedImage image = resize(bi, pgsize.width * 1.15, pgsize.height * 1.10);
-				ImageIO.write(image, "jpg", baos);
-				baos.flush();
-				byte[] imageInByte = baos.toByteArray();
+                ImageIO.write(bi, "png", baos);
+                baos.flush();
+                byte[] imageInByte = baos.toByteArray();
 
-				int idx = ppt.addPicture(imageInByte, XSLFPictureData.PICTURE_TYPE_JPEG);
-				XSLFPictureShape pic = slide.createPicture(idx);
-				pic.setAnchor(new Rectangle2D.Double(-70, 0, pgsize.width, pgsize.height));
+                int idx = ppt.addPicture(imageInByte, XSLFPictureData.PICTURE_TYPE_JPEG);
+                XSLFPictureShape pic = slide.createPicture(idx);
+                pic.setAnchor(new Rectangle2D.Double(-40, 0, pgsize.width * 1.15, pgsize.height * 1.15));
 
-				// this is necessary
-				// the BufferedImage leverages a native byte array that may not
-				// get
-				// automatically gc'd before the next one is created.
-				// for now we will brute force it to work
-				System.gc();
+                // This is necessary surprisingly.
+                // The BufferedImage leverages a native byte array that may not
+                // get automatically gc'd before the next one is created.
+                // for now we will brute force it to work
+                System.gc();
 
-				if (callback != null) {
-					callback.onPageProcessed(++count);
-				}
-			}
+                if (callback != null) {
+                    callback.onPageProcessed(++count);
+                }
+            }
 
-			callback.onPagesProcessed();
+            if (callback != null) {
+                callback.onPagesProcessed();
+            }
 
-			try {
-				FileOutputStream fOut = new FileOutputStream(output);
-				ppt.write(fOut);
-				fOut.close();
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
+            writeFileAndEnd(ppt);
 
-			callback.onCompletion();
-		}
+            if (callback != null) {
+                callback.onCompletion();
+            }
+        }
 
-		public BufferedImage resize(BufferedImage img, double newW, double newH) {
-			int w = img.getWidth();
-			int h = img.getHeight();
-			BufferedImage dimg = new BufferedImage((int) newW, (int) newH, img.getType());
-			Graphics2D g = dimg.createGraphics();
-			g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-			g.drawImage(img, 0, 0, (int) newW, (int) newH, 0, 0, w, h, null);
-			g.dispose();
-			return dimg;
-		}
+        private final void writeFileAndEnd(XMLSlideShow ppt) throws IOException {
+            FileOutputStream fOut = new FileOutputStream(output);
+            try {
+                ppt.write(fOut);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            } finally {
+                fOut.flush();
+                fOut.close();
+                doc.close();
+            }
 
-		@Override
-		public int getPageCount() {
-			return doc.getNumberOfPages();
-		}
+            this.executor.shutdown();
+        }
 
-		@Override
-		public void setConversionCallback(ConversionCallback cb) {
-			callback = cb;
-		}
+        // will keep this here, though the resize does reduce the quality of the
+        // image significantly which it may be unusable
+        public BufferedImage resize(BufferedImage img, double newW, double newH) {
+            int w = img.getWidth();
+            int h = img.getHeight();
+            BufferedImage dimg = new BufferedImage((int) newW, (int) newH, img.getType());
+            Graphics2D g = dimg.createGraphics();
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g.drawImage(img, 0, 0, (int) newW, (int) newH, 0, 0, w, h, null);
+            g.dispose();
+            return dimg;
+        }
 
-	}
+        @Override
+        public int getPageCount() {
+            return doc.getNumberOfPages();
+        }
+
+        @Override
+        public void setConversionCallback(ConversionCallback cb) {
+            callback = cb;
+        }
+
+        @Override
+        public void setOutputFile(File file) {
+            this.output = file;
+        }
+
+    }
 }
