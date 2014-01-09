@@ -71,9 +71,8 @@ public class PdfToPpt implements ProcessorFactory {
                 BufferedImage bi = page.convertToImage(BufferedImage.TYPE_INT_ARGB, 600);
                 double width = pgsize.width * 1.15;
                 double height = pgsize.height * 1.15;
-                BufferedImage image = getScaledInstance(bi, width, height, true);
 
-                ImageIO.write(image, "png", baos);
+                ImageIO.write(bi, "png", baos);
                 baos.flush();
                 byte[] imageInByte = baos.toByteArray();
 
@@ -118,54 +117,6 @@ public class PdfToPpt implements ProcessorFactory {
             this.executor.shutdown();
         }
 
-        /*
-         * Thank you nfechner
-         * http://stackoverflow.com/questions/7951290/resize-image-in-java-lose-quality
-         */
-        private BufferedImage getScaledInstance(BufferedImage img, double w1, double h1, boolean higherQuality) {
-            int targetHeight = (int) h1;
-            int targetWidth = (int) w1;
-            int type = (img.getTransparency() == Transparency.OPAQUE) ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
-            BufferedImage ret = (BufferedImage) img;
-            int w, h;
-            if (higherQuality) {
-                // Use multi-step technique: start with original size, then
-                // scale down in multiple passes with drawImage()
-                // until the target size is reached
-                w = img.getWidth();
-                h = img.getHeight();
-            } else {
-                // Use one-step technique: scale directly from original
-                // size to target size with a single drawImage() call
-                w = targetWidth;
-                h = targetHeight;
-            }
-
-            do {
-                if (higherQuality && w > targetWidth) {
-                    w /= 2;
-                    if (w < targetWidth) {
-                        w = targetWidth;
-                    }
-                }
-
-                if (higherQuality && h > targetHeight) {
-                    h /= 2;
-                    if (h < targetHeight) {
-                        h = targetHeight;
-                    }
-                }
-
-                BufferedImage tmp = new BufferedImage(w, h, type);
-                Graphics2D g2 = tmp.createGraphics();
-                g2.drawImage(ret, 0, 0, w, h, null);
-                g2.dispose();
-
-                ret = tmp;
-            } while (w != targetWidth || h != targetHeight);
-
-            return ret;
-        }
 
         @Override
         public int getPageCount() {
