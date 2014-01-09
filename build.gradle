@@ -3,7 +3,8 @@ apply plugin: 'eclipse'
 apply plugin:'application'
 
 mainClassName = "com.vint.pdf2ppt.ui.Main"
-	
+applicationDefaultJvmArgs = ["-Xmx300m"]
+
 eclipse {
     classpath {
        downloadSources=true
