@@ -2,6 +2,8 @@ package com.vint.pdf2ppt.ui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JButton;
@@ -13,6 +15,11 @@ import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import com.vint.pdf2ppt.core.ConversionCallback;
+import com.vint.pdf2ppt.core.ConversionProcessor;
+import com.vint.pdf2ppt.core.PdfToPpt;
+import com.vint.pdf2ppt.core.ProcessorFactory;
+
 public class UserInterface {
 
 	JFrame frame;
@@ -21,9 +28,13 @@ public class UserInterface {
 	private final JProgressBar progressBar = new JProgressBar();
 	private final JButton selectPDF = new JButton("Select PDF File");
 	private final JButton convertToPPT = new JButton("Convert To PPT");
+	private final JLabel lblThereAre = new JLabel();
+	private final String infoLabelText = "There are # pages to convert.  \"Press Convert To PPT\" when ready";
 
-	private final AtomicBoolean preparing = new AtomicBoolean(false);
-	private 
+	private final ProcessorFactory factory = new PdfToPpt();
+
+	private final AtomicBoolean running = new AtomicBoolean(false);
+	private volatile ConversionProcessor processor;
 
 	/**
 	 * Create the application.
@@ -39,15 +50,94 @@ public class UserInterface {
 				final JFileChooser chooser = new JFileChooser();
 				chooser.setCurrentDirectory(new java.io.File("."));
 				if (chooser.showDialog(frame, "Select") == JFileChooser.APPROVE_OPTION) {
+					final String pdf = chooser.getSelectedFile().getAbsolutePath();
+					final String ppt = chooser.getSelectedFile().getAbsolutePath().replace(".pdf", ".ppt");
 					SwingUtilities.invokeLater(new Runnable() {
 						public void run() {
-							pdfFile.setText(chooser.getSelectedFile().getAbsolutePath());
-							pptFile.setText(chooser.getSelectedFile().getAbsolutePath().replace(".pdf", ".ppt"));
+							pdfFile.setText(pdf);
+							pptFile.setText(ppt);
 						}
 					});
-					if (preparing.compareAndSet(false, true)) {
+					try {
+						processor = factory.prepare(new File(pdf), new File(ppt));
+					} catch (IOException e1) {
+						e1.printStackTrace();
+						throw new RuntimeException(e1);
+					}
+					configureProcessor();
+				}
+			}
+		});
+	}
+
+	private void configureProcessor() {
+		SwingUtilities.invokeLater(new Runnable() {
+			public void run() {
+				progressBar.setString("0 of " + processor.getPageCount() + " pages converted");
+				progressBar.setStringPainted(true);
+				progressBar.setVisible(true);
+				progressBar.setMinimum(1);
+				progressBar.setMaximum(processor.getPageCount());
+				lblThereAre.setText(infoLabelText.replace("#", "" + processor.getPageCount()));
+				lblThereAre.setVisible(true);
+			}
+		});
+		progressBar.setStringPainted(true);
+		processor.setConversionCallback(new ConversionCallback() {
+
+			@Override
+			public void onStart() {
+				SwingUtilities.invokeLater(new Runnable() {
+					public void run() {
+						convertToPPT.setEnabled(false);
+						lblThereAre.setText("The PPT is being built");
+					}
+				});
+			}
+
+			@Override
+			public void onPageProcessed(final int page) {
+				SwingUtilities.invokeLater(new Runnable() {
+					public void run() {
+						progressBar.setValue(page);
+						progressBar.setString(page + " of " + processor.getPageCount() + " pages converted");
 
 					}
+				});
+			}
+
+			@Override
+			public void onPagesProcessed() {
+				SwingUtilities.invokeLater(new Runnable() {
+					public void run() {
+						lblThereAre.setText("All pages have been converted.  Now building the PPT");
+						progressBar.setValue(processor.getPageCount());
+					}
+				});
+			}
+
+			@Override
+			public void onCompletion() {
+				try {
+					Thread.sleep(2000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				SwingUtilities.invokeLater(new Runnable() {
+					public void run() {
+						progressBar.setVisible(false);
+						lblThereAre.setText("The PPT has been created");
+					}
+				});
+				processor = null;
+				running.set(false);
+				convertToPPT.setEnabled(true);
+			}
+		});
+		convertToPPT.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if (running.compareAndSet(false, true)) {
+					processor.execute();
 				}
 			}
 		});
@@ -76,7 +166,7 @@ public class UserInterface {
 		panel.add(pdfFile);
 		pdfFile.setColumns(10);
 
-		progressBar.setBounds(107, 281, 317, 20);
+		progressBar.setBounds(106, 310, 361, 20);
 		panel.add(progressBar);
 
 		selectPDF.setBounds(405, 126, 129, 23);
@@ -95,12 +185,11 @@ public class UserInterface {
 		panel.add(convertToPPT);
 
 		JLabel lblSelectThePdf = new JLabel("Select the PDF File to covert then specify the output file.");
-		lblSelectThePdf.setBounds(62, 11, 347, 36);
+		lblSelectThePdf.setBounds(132, 34, 347, 36);
 		panel.add(lblSelectThePdf);
 
-		JLabel lblWhenDonePress = new JLabel(" When done press Convert to PDF.");
-		lblWhenDonePress.setBounds(104, 46, 200, 14);
-		panel.add(lblWhenDonePress);
+		lblThereAre.setBounds(106, 284, 405, 14);
+		panel.add(lblThereAre);
 
 		progressBar.setVisible(false);
 	}

@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-public interface Processor {
+public interface ProcessorFactory {
 
-	public void process(File input, File output) throws FileNotFoundException, IOException;
+	public ConversionProcessor prepare(File input, File output) throws IOException;
 }
