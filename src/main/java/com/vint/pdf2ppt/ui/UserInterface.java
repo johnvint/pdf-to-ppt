@@ -112,6 +112,7 @@ public class UserInterface {
 					public void run() {
 						lblThereAre.setText("All pages have been converted.  Now building the PPT");
 						progressBar.setValue(processor.getPageCount());
+						progressBar.setVisible(false);
 					}
 				});
 			}
@@ -125,13 +126,12 @@ public class UserInterface {
 				}
 				SwingUtilities.invokeLater(new Runnable() {
 					public void run() {
-						progressBar.setVisible(false);
 						lblThereAre.setText("The PPT has been created");
+						convertToPPT.setEnabled(true);
 					}
 				});
 				processor = null;
 				running.set(false);
-				convertToPPT.setEnabled(true);
 			}
 		});
 		convertToPPT.addActionListener(new ActionListener() {
