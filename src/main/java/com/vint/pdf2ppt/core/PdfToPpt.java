@@ -1,8 +1,8 @@
 package com.vint.pdf2ppt.core;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Transparency;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -69,14 +69,17 @@ public class PdfToPpt implements ProcessorFactory {
 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 BufferedImage bi = page.convertToImage(BufferedImage.TYPE_INT_ARGB, 600);
+                double width = pgsize.width * 1.15;
+                double height = pgsize.height * 1.15;
+                BufferedImage image = getScaledInstance(bi, width, height, true);
 
-                ImageIO.write(bi, "png", baos);
+                ImageIO.write(image, "png", baos);
                 baos.flush();
                 byte[] imageInByte = baos.toByteArray();
 
                 int idx = ppt.addPicture(imageInByte, XSLFPictureData.PICTURE_TYPE_JPEG);
                 XSLFPictureShape pic = slide.createPicture(idx);
-                pic.setAnchor(new Rectangle2D.Double(-40, 0, pgsize.width * 1.15, pgsize.height * 1.15));
+                pic.setAnchor(new Rectangle2D.Double(-40, 0, width, height));
 
                 // This is necessary surprisingly.
                 // The BufferedImage leverages a native byte array that may not
@@ -115,17 +118,53 @@ public class PdfToPpt implements ProcessorFactory {
             this.executor.shutdown();
         }
 
-        // will keep this here, though the resize does reduce the quality of the
-        // image significantly which it may be unusable
-        public BufferedImage resize(BufferedImage img, double newW, double newH) {
-            int w = img.getWidth();
-            int h = img.getHeight();
-            BufferedImage dimg = new BufferedImage((int) newW, (int) newH, img.getType());
-            Graphics2D g = dimg.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g.drawImage(img, 0, 0, (int) newW, (int) newH, 0, 0, w, h, null);
-            g.dispose();
-            return dimg;
+        /*
+         * Thank you nfechner
+         * http://stackoverflow.com/questions/7951290/resize-image-in-java-lose-quality
+         */
+        private BufferedImage getScaledInstance(BufferedImage img, double w1, double h1, boolean higherQuality) {
+            int targetHeight = (int) h1;
+            int targetWidth = (int) w1;
+            int type = (img.getTransparency() == Transparency.OPAQUE) ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
+            BufferedImage ret = (BufferedImage) img;
+            int w, h;
+            if (higherQuality) {
+                // Use multi-step technique: start with original size, then
+                // scale down in multiple passes with drawImage()
+                // until the target size is reached
+                w = img.getWidth();
+                h = img.getHeight();
+            } else {
+                // Use one-step technique: scale directly from original
+                // size to target size with a single drawImage() call
+                w = targetWidth;
+                h = targetHeight;
+            }
+
+            do {
+                if (higherQuality && w > targetWidth) {
+                    w /= 2;
+                    if (w < targetWidth) {
+                        w = targetWidth;
+                    }
+                }
+
+                if (higherQuality && h > targetHeight) {
+                    h /= 2;
+                    if (h < targetHeight) {
+                        h = targetHeight;
+                    }
+                }
+
+                BufferedImage tmp = new BufferedImage(w, h, type);
+                Graphics2D g2 = tmp.createGraphics();
+                g2.drawImage(ret, 0, 0, w, h, null);
+                g2.dispose();
+
+                ret = tmp;
+            } while (w != targetWidth || h != targetHeight);
+
+            return ret;
         }
 
         @Override
