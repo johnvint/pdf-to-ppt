@@ -1,14 +1,21 @@
 package com.vint.pdf2ppt.ui;
 
-import java.io.File;
+import java.awt.EventQueue;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-
-import com.vint.pdf2ppt.core.PdfToPPT;
 
 public class Main {
 
 	public static void main(String args[]) throws FileNotFoundException, IOException {
-		new PdfToPPT().process(new File("C:/Users/Brad/Downloads/Physiology Lectures Pt. II.pdf"), new File(""));
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					UserInterface window = new UserInterface();
+					window.frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 }
