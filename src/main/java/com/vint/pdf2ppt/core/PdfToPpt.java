@@ -70,7 +70,7 @@ public class PdfToPpt implements ProcessorFactory {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 BufferedImage bi = page.convertToImage(BufferedImage.TYPE_INT_ARGB, 600);
                 double width = pgsize.width * 1.15;
-                double height = pgsize.height * 1.15;
+                double height = pgsize.height * 1.12;
 
                 ImageIO.write(bi, "png", baos);
                 baos.flush();
@@ -78,7 +78,7 @@ public class PdfToPpt implements ProcessorFactory {
 
                 int idx = ppt.addPicture(imageInByte, XSLFPictureData.PICTURE_TYPE_JPEG);
                 XSLFPictureShape pic = slide.createPicture(idx);
-                pic.setAnchor(new Rectangle2D.Double(-40, 0, width, height));
+                pic.setAnchor(new Rectangle2D.Double(-40, -5, width, height));
 
                 // This is necessary surprisingly.
                 // The BufferedImage leverages a native byte array that may not
